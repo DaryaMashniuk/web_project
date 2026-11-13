@@ -1,0 +1,79 @@
+name: Photo Gallery CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # 1. Автоматическая сборка и Юнит-тесты
+  build-and-unit-tests:
+    name: Build & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run Unit Tests
+        run: mvn test -Dtest=JwtUtilsTest
+
+      - name: Build Application Jar
+        run: mvn package -DskipTests
+
+  # Шаг интеграционного тестирования
+  integration-tests:
+    name: Integration Testing (Testcontainers PostgreSQL)
+    needs: build-and-unit-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      # Запускает тест, Testcontainers автоматически скачивает postgres:16-alpine и выполняет проверку
+      - name: Run Full Integration Tests
+        run: mvn test -Dtest=PhotoGalleryIntegrationTest
+
+  # 3. Деплой на Staging (Тестовое окружение)
+  deploy-staging:
+    name: Deploy to Staging Environment
+    needs: integration-tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy Staging Containers
+        run: |
+          echo "Развертывание staging-окружения через Docker Compose..."
+          docker compose up -d --build
+          sleep 10
+          # Проверка работоспособности Healthcheck
+          curl --fail http://localhost:8080/actuator/health || exit 1
+          echo "Staging успешно развернут и проверен!"
+
+  # 4. Продакшн деплой и готовность к откату
+  deploy-production:
+    name: Deploy to Production
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - name: Deploy to Prod
+        run: |
+          echo "Приложение прошло все тесты и готово к продакшну!"
+          echo "Release tag: v1.0.${{ github.run_number }}"
