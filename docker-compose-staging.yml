@@ -15,7 +15,7 @@ services:
       retries: 10
 
   app:
-    build: .
+    build: demo
     container_name: photogallery-staging-app
     ports:
       - "8080:8080"

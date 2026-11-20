@@ -46,7 +46,7 @@ jobs:
         run: mvn test -Dtest=PhotoGalleryIntegrationTest
 
   deploy-staging:
-    name: 3. Deploy to Staging Environment
+    name: 3. Deploy to  Staging Environment
     needs: integration-tests
     runs-on: ubuntu-latest
     steps:
