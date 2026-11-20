@@ -21,24 +21,24 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Unit Tests (JwtUtils & PhotoService)
+      - name: Run Unit Tests
         run: mvn test -Dtest=JwtUtilsTest,PhotoServiceTest
 
       - name: Package JAR Artifact
         run: mvn package -DskipTests
 
   integration-tests:
-    name: 2. Integration Tests (PostgreSQL Testcontainers)
+    name: 2. Integration Tests
     needs: build-and-unit-tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
+          java-version: '21'
           distribution: 'temurin'
           cache: maven
 
@@ -46,7 +46,7 @@ jobs:
         run: mvn test -Dtest=PhotoGalleryIntegrationTest
 
   deploy-staging:
-    name: 3. Deploy to  Staging Environment
+    name: 3. Deploy to Staging Environment
     needs: integration-tests
     runs-on: ubuntu-latest
     steps:
@@ -55,7 +55,7 @@ jobs:
 
       - name: Build and Start Staging Containers
         run: |
-          docker compose -f docker-compose.staging.yml up -d --build
+          docker compose -f docker-compose-staging.yml up -d --build
 
       - name: Wait & Verify Health Check
         run: |
@@ -65,7 +65,7 @@ jobs:
 
       - name: Stop Staging Containers
         if: always()
-        run: docker compose -f docker-compose.staging.yml down
+        run: docker compose -f docker-compose-staging.yml down
 
   deploy-production:
     name: 4. Production Release
