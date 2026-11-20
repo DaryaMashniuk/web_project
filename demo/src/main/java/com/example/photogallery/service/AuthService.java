@@ -17,6 +17,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class AuthService {
@@ -42,7 +43,7 @@ public class AuthService {
         }
         User user = new User(
                 request.getUsername(),
-                passwordEncoder.encode(request.getPassword()), // BCrypt
+                passwordEncoder.encode(request.getPassword()),
                 Set.of("ROLE_USER")
         );
         userRepository.save(user);
@@ -89,15 +90,24 @@ public class AuthService {
         String rawRefreshToken = jwtUtils.generateRawRefreshToken();
         String tokenHash = jwtUtils.hashTokenSha256(rawRefreshToken);
         Instant expiryDate = Instant.now().plusMillis(jwtUtils.getRefreshExpirationMs());
+        String newSessionId = UUID.randomUUID().toString();
 
         DeviceSession session = deviceSessionRepository.findByUserAndDeviceId(user, deviceId)
-                .orElseGet(() -> new DeviceSession(user, deviceId, tokenHash, expiryDate));
+                .orElseGet(() -> new DeviceSession(user, deviceId, newSessionId, tokenHash, expiryDate));
 
+        session.setSessionId(newSessionId);
         session.setTokenHash(tokenHash);
         session.setExpiryDate(expiryDate);
         deviceSessionRepository.save(session);
 
-        String accessToken = jwtUtils.generateAccessToken(user.getId(), user.getUsername(), user.getRoles(), deviceId);
+        String accessToken = jwtUtils.generateAccessToken(
+                user.getId(),
+                user.getUsername(),
+                user.getRoles(),
+                deviceId,
+                newSessionId
+        );
+
         return new TokenResponse(accessToken, rawRefreshToken, deviceId);
     }
 }

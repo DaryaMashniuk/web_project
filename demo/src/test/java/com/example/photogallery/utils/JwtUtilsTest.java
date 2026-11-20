@@ -1,12 +1,12 @@
-package com.example.photogallery.security;
+package com.example.photogallery.utils;
 
-import com.example.photogallery.utils.JwtUtils;
 import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.Set;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -21,27 +21,35 @@ class JwtUtilsTest {
     }
 
     @Test
-    @DisplayName("Unit-тест: корректная генерация и парсинг токена для конкретного устройства")
+    @DisplayName("Unit-тест: генерация Access-токена со всеми полями ТЗ (Вариант 7)")
     void generateAndValidateAccessToken() {
-        String token = jwtUtils.generateAccessToken(1L, "photographer_pro", Set.of("ROLE_USER"), "macbook-m1");
+        String testSessionId = UUID.randomUUID().toString();
+
+        String token = jwtUtils.generateAccessToken(
+                10L,
+                "alex_photographer",
+                Set.of("ROLE_USER"),
+                "macbook-pro-16",
+                testSessionId
+        );
 
         assertNotNull(token);
         Claims claims = jwtUtils.parseAndValidateClaims(token);
 
-        assertEquals("photographer_pro", claims.getSubject());
+        assertEquals("alex_photographer", claims.getSubject());
         assertEquals("access", claims.get("type", String.class));
-        assertEquals("macbook-m1", claims.get("deviceId", String.class));
+        assertEquals("macbook-pro-16", claims.get("deviceId", String.class));
+        assertEquals(testSessionId, claims.get("sessionId", String.class));
     }
 
     @Test
-    @DisplayName("Unit-тест: хеширование refresh-токена в SHA-256")
+    @DisplayName("Unit-тест: хеширование refresh-токена алгоритмом SHA-256")
     void hashTokenSha256() {
-        String rawToken = "sample-refresh-token-12345";
-        String hash1 = jwtUtils.hashTokenSha256(rawToken);
-        String hash2 = jwtUtils.hashTokenSha256(rawToken);
+        String rawToken = "secure-random-refresh-token-value";
+        String hash = jwtUtils.hashTokenSha256(rawToken);
 
-        assertNotNull(hash1);
-        assertEquals(hash1, hash2, "Хеши одинаковых токенов должны совпадать");
-        assertNotEquals(rawToken, hash1, "В базе не должен храниться открытый токен");
+        assertNotNull(hash);
+        assertNotEquals(rawToken, hash);
+        assertEquals(hash, jwtUtils.hashTokenSha256(rawToken), "Хеши одинаковых токенов должны совпадать");
     }
 }

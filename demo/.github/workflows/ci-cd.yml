@@ -7,12 +7,11 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # 1. Автоматическая сборка и Юнит-тесты
   build-and-unit-tests:
-    name: Build & Unit Tests
+    name: 1. Build & Unit Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -22,19 +21,18 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Run Unit Tests
-        run: mvn test -Dtest=JwtUtilsTest
+      - name: Run Unit Tests (JwtUtils & PhotoService)
+        run: mvn test -Dtest=JwtUtilsTest,PhotoServiceTest
 
-      - name: Build Application Jar
+      - name: Package JAR Artifact
         run: mvn package -DskipTests
 
-  # Шаг интеграционного тестирования
   integration-tests:
-    name: Integration Testing (Testcontainers PostgreSQL)
+    name: 2. Integration Tests (PostgreSQL Testcontainers)
     needs: build-and-unit-tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -44,36 +42,38 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # Запускает тест, Testcontainers автоматически скачивает postgres:16-alpine и выполняет проверку
       - name: Run Full Integration Tests
         run: mvn test -Dtest=PhotoGalleryIntegrationTest
 
-  # 3. Деплой на Staging (Тестовое окружение)
   deploy-staging:
-    name: Deploy to Staging Environment
+    name: 3. Deploy to Staging Environment
     needs: integration-tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Deploy Staging Containers
+      - name: Build and Start Staging Containers
         run: |
-          echo "Развертывание staging-окружения через Docker Compose..."
-          docker compose up -d --build
-          sleep 10
-          # Проверка работоспособности Healthcheck
-          curl --fail http://localhost:8080/actuator/health || exit 1
-          echo "Staging успешно развернут и проверен!"
+          docker compose -f docker-compose.staging.yml up -d --build
 
-  # 4. Продакшн деплой и готовность к откату
+      - name: Wait & Verify Health Check
+        run: |
+          echo "Ожидание запуска приложения..."
+          timeout 60 bash -c 'until curl -s http://localhost:8080/actuator/health | grep "UP"; do sleep 3; done'
+          echo "Staging стенд успешно развернут и статус приложения: UP!"
+
+      - name: Stop Staging Containers
+        if: always()
+        run: docker compose -f docker-compose.staging.yml down
+
   deploy-production:
-    name: Deploy to Production
+    name: 4. Production Release
     needs: deploy-staging
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     steps:
-      - name: Deploy to Prod
+      - name: Announce Release
         run: |
-          echo "Приложение прошло все тесты и готово к продакшну!"
-          echo "Release tag: v1.0.${{ github.run_number }}"
+          echo "Все тесты успешно пройдены!"
+          echo "Приложение готово к продакшну. Release Tag: v1.0.${{ github.run_number }}"

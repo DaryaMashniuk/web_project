@@ -31,16 +31,9 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(csrf -> csrf.disable())
-                // Позволяет поддерживать как Stateless JWT, так и Cookie для OAuth2
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
-                                "/",
-                                "/google",
-                                "/github",
-                                "/gitlab",
-                                "/oauth2/**",
-                                "/login/**",
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
@@ -48,27 +41,17 @@ public class SecurityConfig {
                                 "/swagger-ui.html",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/error",
-                                "/api/photos/**"
+                                "/actuator/**",
+                                "/error"
                         ).permitAll()
-                        .requestMatchers("/good", "/api/auth/me").authenticated()
+                        .requestMatchers("/api/auth/me", "/api/photos/**").authenticated()
                         .anyRequest().authenticated()
-                )
-                .oauth2Login(oauth2 -> oauth2
-                        .defaultSuccessUrl("/good", true)
-                )
-                .logout(logout -> logout
-                        .logoutUrl("/logout")
-                        .logoutSuccessUrl("/")
-                        .invalidateHttpSession(true)
-                        .clearAuthentication(true)
-                        .deleteCookies("JSESSIONID")
                 )
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((request, response, authException) -> {
                             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                            response.setContentType("text/plain;charset=UTF-8");
-                            response.getWriter().write("Unauthorized");
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.getWriter().write("{\"error\": \"UNAUTHORIZED\", \"message\": \"Authentication required\"}");
                         })
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

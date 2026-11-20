@@ -30,7 +30,7 @@ public class JwtUtils {
         this.refreshExpirationMs = refreshExpirationMs;
     }
 
-    public String generateAccessToken(Long userId, String username, Set<String> roles, String deviceId) {
+    public String generateAccessToken(Long userId, String username, Set<String> roles, String deviceId, String sessionId) {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + accessExpirationMs);
 
@@ -41,6 +41,7 @@ public class JwtUtils {
                 .claim("roles", roles)
                 .claim("type", "access")
                 .claim("deviceId", deviceId)
+                .claim("sessionId", sessionId)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key, Jwts.SIG.HS256)

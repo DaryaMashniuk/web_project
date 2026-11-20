@@ -20,6 +20,9 @@ public class DeviceSession {
     @Column(name = "device_id", nullable = false)
     private String deviceId;
 
+    @Column(name = "session_id", nullable = false)
+    private String sessionId; // <-- Уникальный ID текущего access-токена устройства
+
     @Column(name = "token_hash", nullable = false)
     private String tokenHash;
 
@@ -28,9 +31,10 @@ public class DeviceSession {
 
     public DeviceSession() {}
 
-    public DeviceSession(User user, String deviceId, String tokenHash, Instant expiryDate) {
+    public DeviceSession(User user, String deviceId, String sessionId, String tokenHash, Instant expiryDate) {
         this.user = user;
         this.deviceId = deviceId;
+        this.sessionId = sessionId;
         this.tokenHash = tokenHash;
         this.expiryDate = expiryDate;
     }
@@ -41,6 +45,9 @@ public class DeviceSession {
 
     public String getDeviceId() { return deviceId; }
     public void setDeviceId(String deviceId) { this.deviceId = deviceId; }
+
+    public String getSessionId() { return sessionId; }
+    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
 
     public String getTokenHash() { return tokenHash; }
     public void setTokenHash(String tokenHash) { this.tokenHash = tokenHash; }
