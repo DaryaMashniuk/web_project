@@ -1,13 +1,13 @@
-# Этап 1: Сборка jar-пакета
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS builder
+# Этап 1: Сборка
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS builder
 WORKDIR /app
-COPY demo/pom.xml .
+COPY pom.xml .
 RUN mvn dependency:go-offline -B
-COPY demo/src ./src
+COPY src ./src
 RUN mvn clean package -DskipTests
 
-# Этап 2: Финальный образ для запуска
-FROM eclipse-temurin:17-jre-alpine
+# Этап 2: Запуск
+FROM eclipse-temurin:21-jre-alpine
 WORKDIR /app
 COPY --from=builder /app/target/*.jar app.jar
 
